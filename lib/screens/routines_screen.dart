@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/routine.dart';
 import '../services/workout_service.dart';
+import 'routine_detail_screen.dart';
 
 class RoutinesScreen extends StatefulWidget {
   const RoutinesScreen({super.key});
+
   @override
   State<RoutinesScreen> createState() => _RoutinesScreenState();
 }
@@ -72,9 +74,12 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
                   (r) => ListTile(
                     title: Text(r.name),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      /* TODO: open routine to add movements */
-                    },
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RoutineDetailScreen(routine: r),
+                      ),
+                    ),
                   ),
                 )
                 .toList(),
