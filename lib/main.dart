@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'app_settings.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,19 +27,11 @@ class MyApp extends StatelessWidget {
           builder: (context, locale, __) {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
-              themeMode: mode, // ← theme switch
-              theme: ThemeData(
-                colorSchemeSeed: Colors.indigo,
-                brightness: Brightness.light,
-                useMaterial3: true,
-              ),
-              darkTheme: ThemeData(
-                colorSchemeSeed: Colors.indigo,
-                brightness: Brightness.dark,
-                useMaterial3: true,
-              ),
-              locale: locale, // ← language
-              home: const AuthGate(), // ← keep whatever your current home is
+              themeMode: mode,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              locale: locale,
+              home: const AuthGate(),
             );
           },
         );

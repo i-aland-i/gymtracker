@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../models/session.dart';
 import '../models/workout_set.dart';
 import '../services/workout_service.dart';
+import '../widgets/empty_state.dart';
 
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
@@ -18,19 +19,28 @@ class _LogScreenState extends State<LogScreen> {
   Routine? _routine;
   bool _starting = false;
 
-  String get _today {
+  static String _todayRaw() {
     final d = DateTime.now();
     return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
         '${d.day.toString().padLeft(2, '0')}';
   }
 
-  // Reuse today's session for this routine if one exists, else start a new one.
+  static String _todayLabel() {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final d = DateTime.now();
+    return '${days[d.weekday - 1]} · ${months[d.month - 1]} ${d.day}';
+  }
+
   Future<void> _start(Routine routine) async {
     setState(() => _starting = true);
     final today = DateTime.now();
-    final existing = (await _service.getSessionsForDate(
-      today,
-    )).where((s) => s.routineId == routine.id).toList();
+    final existing = (await _service.getSessionsForDate(today))
+        .where((s) => s.routineId == routine.id)
+        .toList();
     final session = existing.isNotEmpty
         ? existing.first
         : await _service.startSession(routine.id, today);
@@ -43,9 +53,9 @@ class _LogScreenState extends State<LogScreen> {
   }
 
   void _finish() => setState(() {
-    _session = null;
-    _routine = null;
-  });
+        _session = null;
+        _routine = null;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +63,26 @@ class _LogScreenState extends State<LogScreen> {
     return _buildLogger();
   }
 
+  // ── Routine picker ──────────────────────────────────────────────────────
+
   Widget _buildPicker() {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: Text('Log — $_today')),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Log workout'),
+            Text(
+              _todayRaw(),
+              style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
       body: _starting
           ? const Center(child: CircularProgressIndicator())
           : FutureBuilder<List<Routine>>(
@@ -66,21 +93,77 @@ class _LogScreenState extends State<LogScreen> {
                 }
                 final routines = snap.data!;
                 if (routines.isEmpty) {
-                  return const Center(
-                    child: Text('Create a workout day first (Days tab)'),
+                  return const EmptyState(
+                    icon: Icons.fitness_center_rounded,
+                    title: 'No workout days yet',
+                    subtitle: 'Create a workout day in the Days tab first',
                   );
                 }
-                return ListView(
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('Pick a workout day to log'),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                      child: Text(
+                        'Pick a workout to start',
+                        style: t.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
                     ),
-                    ...routines.map(
-                      (r) => ListTile(
-                        title: Text(r.name),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _start(r),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(top: 4, bottom: 20),
+                        itemCount: routines.length,
+                        itemBuilder: (context, i) {
+                          final r = routines[i];
+                          return Card(
+                            child: InkWell(
+                              onTap: () => _start(r),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: cs.primaryContainer,
+                                        borderRadius:
+                                            BorderRadius.circular(12),
+                                      ),
+                                      child: Icon(
+                                        Icons.fitness_center_rounded,
+                                        color: cs.onPrimaryContainer,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(r.name, style: t.titleMedium),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: cs.primary,
+                                        borderRadius:
+                                            BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        'Start',
+                                        style: t.labelMedium?.copyWith(
+                                          color: cs.onPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -90,16 +173,35 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
+  // ── Active session logger ───────────────────────────────────────────────
+
   Widget _buildLogger() {
     final session = _session!;
     final routine = _routine!;
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: _finish,
         ),
         title: Text(routine.name),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: FilledButton.tonal(
+              onPressed: _finish,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 36),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              ),
+              child: const Text('Finish'),
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<List<Exercise>>(
         future: _service.getRoutineExercises(routine.id),
@@ -109,22 +211,22 @@ class _LogScreenState extends State<LogScreen> {
           }
           final movements = snap.data!;
           if (movements.isEmpty) {
-            return const Center(
-              child: Text(
-                'No movements in this day — add some in the Days tab',
-              ),
+            return EmptyState(
+              icon: Icons.bolt_rounded,
+              title: 'No movements',
+              subtitle:
+                  'Add movements to "${routine.name}" in the Days tab first',
             );
           }
           return ListView(
+            padding: const EdgeInsets.only(top: 8, bottom: 32),
             children: movements
-                .map(
-                  (e) => _MovementLogTile(
-                    key: ValueKey(e.id),
-                    service: _service,
-                    session: session,
-                    exercise: e,
-                  ),
-                )
+                .map((e) => _MovementLogTile(
+                      key: ValueKey(e.id),
+                      service: _service,
+                      session: session,
+                      exercise: e,
+                    ))
                 .toList(),
           );
         },
@@ -133,10 +235,13 @@ class _LogScreenState extends State<LogScreen> {
   }
 }
 
+// ── Movement tile ─────────────────────────────────────────────────────────────
+
 class _MovementLogTile extends StatefulWidget {
   final WorkoutService service;
   final Session session;
   final Exercise exercise;
+
   const _MovementLogTile({
     super.key,
     required this.service,
@@ -151,14 +256,16 @@ class _MovementLogTile extends StatefulWidget {
 class _MovementLogTileState extends State<_MovementLogTile> {
   late Future<List<WorkoutSet>> _setsFuture;
   late Future<List<WorkoutSet>> _lastFuture;
-  final _repsController = TextEditingController();
-  final _weightController = TextEditingController();
+  final _repsCtrl = TextEditingController();
+  final _weightCtrl = TextEditingController();
   List<WorkoutSet> _sets = [];
+  int? _selectedReps;
 
   @override
   void initState() {
     super.initState();
-    _setsFuture = widget.service.getSets(widget.session.id, widget.exercise.id);
+    _setsFuture =
+        widget.service.getSets(widget.session.id, widget.exercise.id);
     _lastFuture = widget.service.lastTime(
       widget.exercise.id,
       excludeSessionId: widget.session.id,
@@ -167,22 +274,22 @@ class _MovementLogTileState extends State<_MovementLogTile> {
 
   @override
   void dispose() {
-    _repsController.dispose();
-    _weightController.dispose();
+    _repsCtrl.dispose();
+    _weightCtrl.dispose();
     super.dispose();
   }
 
-  void _reloadSets() => setState(() {
-    _setsFuture = widget.service.getSets(widget.session.id, widget.exercise.id);
-  });
+  void _reloadSets() => setState(
+      () => _setsFuture =
+          widget.service.getSets(widget.session.id, widget.exercise.id));
 
   Future<void> _addSet() async {
-    final reps = int.tryParse(_repsController.text.trim());
-    final weight = num.tryParse(_weightController.text.trim());
+    final reps = int.tryParse(_repsCtrl.text.trim());
+    final weight = num.tryParse(_weightCtrl.text.trim());
     if (reps == null || reps <= 0 || weight == null || weight < 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter reps and weight')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter valid reps and weight')),
+      );
       return;
     }
     await widget.service.logSet(
@@ -192,111 +299,217 @@ class _MovementLogTileState extends State<_MovementLogTile> {
       weight: weight,
       setNumber: _sets.length + 1,
     );
+    setState(() => _selectedReps = null);
+    _repsCtrl.clear();
+    _weightCtrl.clear();
     _reloadSets();
   }
 
-  // Drop a trailing ".0" so 60.0 shows as 60 but 62.5 stays 62.5.
   String _w(num w) => w % 1 == 0 ? w.toInt().toString() : w.toString();
 
-  String _format(List<WorkoutSet> sets) =>
-      sets.map((s) => '${_w(s.weight)}kg × ${s.reps}').join(',  ');
+  String _formatSets(List<WorkoutSet> sets) =>
+      sets.map((s) => '${_w(s.weight)} kg × ${s.reps}').join('  ·  ');
 
   @override
   Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.exercise.name,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            // ── Header: name + muscle badge ────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(widget.exercise.name, style: t.titleMedium),
+                ),
+                if (widget.exercise.muscleGroup != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: cs.secondaryContainer,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      widget.exercise.muscleGroup!,
+                      style: t.labelSmall
+                          ?.copyWith(color: cs.onSecondaryContainer),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 4),
-            // Last time line — the defining feature.
+
+            // ── Last session ───────────────────────────────────────────
             FutureBuilder<List<WorkoutSet>>(
               future: _lastFuture,
               builder: (context, snap) {
-                if (!snap.hasData) return const SizedBox(height: 16);
-                final last = snap.data!;
-                final text = last.isEmpty
-                    ? 'Last time: no previous data'
-                    : 'Last time: ${_format(last)}';
-                return Text(
-                  text,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
+                if (!snap.hasData || snap.data!.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.history_rounded,
+                            size: 14, color: cs.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Last: ${_formatSets(snap.data!)}',
+                            style: t.bodySmall
+                                ?.copyWith(color: cs.onSurfaceVariant),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
-            const SizedBox(height: 8),
-            // Sets logged this session.
+
+            // ── Sets logged this session ───────────────────────────────
             FutureBuilder<List<WorkoutSet>>(
               future: _setsFuture,
               builder: (context, snap) {
                 if (!snap.hasData) return const SizedBox.shrink();
                 _sets = snap.data!;
                 if (_sets.isEmpty) return const SizedBox.shrink();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _sets
-                      .asMap()
-                      .entries
-                      .map(
-                        (entry) => Text(
-                          'Set ${entry.value.setNumber ?? entry.key + 1}:  '
-                          '${_w(entry.value.weight)}kg × ${entry.value.reps} reps',
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    children: _sets.asMap().entries.map((e) {
+                      final i = e.key;
+                      final s = e.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color:
+                                    cs.primary.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${s.setNumber ?? i + 1}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: cs.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '${_w(s.weight)} kg  ×  ${s.reps} reps',
+                              style: t.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w500),
+                            ),
+                          ],
                         ),
-                      )
-                      .toList(),
+                      );
+                    }).toList(),
+                  ),
                 );
               },
             ),
-            const SizedBox(height: 8),
-            // Reps quick-pick 1-6.
-            Wrap(
-              spacing: 6,
-              children: List.generate(6, (i) {
-                final n = i + 1;
-                return ActionChip(
-                  label: Text('$n'),
-                  onPressed: () => _repsController.text = '$n',
-                );
-              }),
+
+            // ── Divider ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Divider(height: 1, color: cs.outlineVariant),
             ),
-            const SizedBox(height: 8),
+
+            // ── Quick reps ─────────────────────────────────────────────
             Row(
+              children: [
+                Text(
+                  'Reps',
+                  style: t.labelSmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(width: 10),
+                Wrap(
+                  spacing: 5,
+                  children: List.generate(6, (i) {
+                    final n = i + 1;
+                    return ChoiceChip(
+                      label: Text('$n'),
+                      selected: _selectedReps == n,
+                      onSelected: (_) => setState(() {
+                        _selectedReps = n;
+                        _repsCtrl.text = '$n';
+                      }),
+                      visualDensity: VisualDensity.compact,
+                    );
+                  }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // ── Input row ──────────────────────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _repsController,
+                    controller: _repsCtrl,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Reps',
-                      isDense: true,
-                      border: OutlineInputBorder(),
+                      hintText: 'Reps',
+                      prefixIcon: Icon(Icons.repeat_rounded, size: 18),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    controller: _weightController,
+                    controller: _weightCtrl,
                     keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
+                        decimal: true),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _addSet(),
                     decoration: const InputDecoration(
-                      labelText: 'Weight (kg)',
-                      isDense: true,
-                      border: OutlineInputBorder(),
+                      hintText: 'Weight (kg)',
+                      prefixIcon:
+                          Icon(Icons.monitor_weight_outlined, size: 18),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(onPressed: _addSet, child: const Text('Add')),
+                FilledButton.icon(
+                  onPressed: _addSet,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14),
+                  ),
+                ),
               ],
             ),
           ],
