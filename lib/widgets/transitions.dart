@@ -1,34 +1,36 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-/// Slide-from-right + fade page transition.
-/// Uses animation.drive() instead of CurvedAnimation to avoid listener leaks.
+/// Page transition: fade on web, slide+fade on mobile.
 class AppPageRoute<T> extends PageRouteBuilder<T> {
   AppPageRoute({required WidgetBuilder builder, super.settings})
       : super(
           pageBuilder: (context, animation, secondaryAnimation) =>
               builder(context),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final opacity = animation.drive(
+            final fade = animation.drive(
               Tween<double>(begin: 0.0, end: 1.0)
                   .chain(CurveTween(curve: Curves.easeOut)),
             );
+            if (kIsWeb) {
+              return FadeTransition(opacity: fade, child: child);
+            }
             final slide = animation.drive(
-              Tween<Offset>(
-                begin: const Offset(0.06, 0),
-                end: Offset.zero,
-              ).chain(CurveTween(curve: Curves.easeOutCubic)),
+              Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero)
+                  .chain(CurveTween(curve: Curves.easeOutCubic)),
             );
             return FadeTransition(
-              opacity: opacity,
+              opacity: fade,
               child: SlideTransition(position: slide, child: child),
             );
           },
-          transitionDuration: const Duration(milliseconds: 300),
-          reverseTransitionDuration: const Duration(milliseconds: 240),
+          transitionDuration: Duration(milliseconds: kIsWeb ? 200 : 300),
+          reverseTransitionDuration:
+              Duration(milliseconds: kIsWeb ? 160 : 240),
         );
 }
 
-/// Cross-fade for tab switches.
+/// Smooth cross-fade for tab switches on all platforms.
 class FadeIndexedStack extends StatefulWidget {
   const FadeIndexedStack({
     super.key,
@@ -54,7 +56,7 @@ class _FadeIndexedStackState extends State<FadeIndexedStack>
     _index = widget.index;
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 160),
+      duration: const Duration(milliseconds: 180),
       value: 1.0,
     );
   }
@@ -64,10 +66,11 @@ class _FadeIndexedStackState extends State<FadeIndexedStack>
     super.didUpdateWidget(old);
     if (old.index != widget.index) {
       _index = widget.index;
-      // Schedule after the current frame to avoid mutating animation state
-      // mid-rebuild, which causes _dependents assertion errors.
+      // Set to 0 synchronously so the new content is already hidden when
+      // the frame paints, then fade in after the frame completes.
+      _ctrl.value = 0.0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _ctrl.forward(from: 0.0);
+        if (mounted) _ctrl.forward();
       });
     }
   }

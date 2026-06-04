@@ -5,6 +5,7 @@ import '../models/session.dart';
 import '../models/workout_set.dart';
 import '../services/workout_service.dart';
 import '../widgets/empty_state.dart';
+import '../app_settings.dart';
 
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
@@ -19,6 +20,26 @@ class _LogScreenState extends State<LogScreen> {
   Routine? _routine;
   bool _starting = false;
   bool _hasAnySets = false;
+  late Future<List<Routine>> _routinesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _routinesFuture = _service.getRoutines();
+    routinesChangedNotifier.addListener(_onRoutinesChanged);
+  }
+
+  @override
+  void dispose() {
+    routinesChangedNotifier.removeListener(_onRoutinesChanged);
+    super.dispose();
+  }
+
+  void _onRoutinesChanged() {
+    if (_session == null && mounted) {
+      setState(() => _routinesFuture = _service.getRoutines());
+    }
+  }
 
   void _onSetLogged() {
     if (!_hasAnySets) setState(() => _hasAnySets = true);
@@ -133,7 +154,7 @@ class _LogScreenState extends State<LogScreen> {
       body: _starting
           ? const Center(child: CircularProgressIndicator())
           : FutureBuilder<List<Routine>>(
-              future: _service.getRoutines(),
+              future: _routinesFuture,
               builder: (context, snap) {
                 if (!snap.hasData) {
                   return const Center(child: CircularProgressIndicator());

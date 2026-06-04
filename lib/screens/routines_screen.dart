@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../services/workout_service.dart';
 import '../widgets/transitions.dart';
 import '../widgets/empty_state.dart';
+import '../app_settings.dart';
 import 'routine_detail_screen.dart';
 
 class RoutinesScreen extends StatefulWidget {
@@ -35,6 +36,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
     list.insert(newIndex, list.removeAt(oldIndex));
     setState(() => _routines = list);
     _service.updateRoutinePositions(list.map((r) => r.id).toList());
+    notifyRoutinesChanged();
   }
 
   Future<void> _addDialog() async {
@@ -72,6 +74,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
         position: _routines.length,
       );
       if (mounted) setState(() => _routines = [..._routines, routine]);
+      notifyRoutinesChanged();
     }
   }
 
@@ -104,8 +107,8 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
       if (mounted) {
         final updated = _routines.where((x) => x.id != r.id).toList();
         setState(() => _routines = updated);
-        // Re-save positions after deletion so there are no gaps
         _service.updateRoutinePositions(updated.map((r) => r.id).toList());
+        notifyRoutinesChanged();
       }
     }
   }
