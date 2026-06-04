@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 
-/// Slide-from-right + fade. Use instead of MaterialPageRoute everywhere.
+/// Slide-from-right + fade page transition.
+/// Uses animation.drive() instead of CurvedAnimation to avoid listener leaks.
 class AppPageRoute<T> extends PageRouteBuilder<T> {
   AppPageRoute({required WidgetBuilder builder, super.settings})
       : super(
           pageBuilder: (context, animation, secondaryAnimation) =>
               builder(context),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final slide = Tween<Offset>(
-              begin: const Offset(0.06, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            ));
-            final fade = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
+            final opacity = animation.drive(
+              Tween<double>(begin: 0.0, end: 1.0)
+                  .chain(CurveTween(curve: Curves.easeOut)),
+            );
+            final slide = animation.drive(
+              Tween<Offset>(
+                begin: const Offset(0.06, 0),
+                end: Offset.zero,
+              ).chain(CurveTween(curve: Curves.easeOutCubic)),
             );
             return FadeTransition(
-              opacity: fade,
+              opacity: opacity,
               child: SlideTransition(position: slide, child: child),
             );
           },
@@ -28,7 +28,7 @@ class AppPageRoute<T> extends PageRouteBuilder<T> {
         );
 }
 
-/// Smooth cross-fade for IndexedStack / tab switches.
+/// Cross-fade for tab switches.
 class FadeIndexedStack extends StatefulWidget {
   const FadeIndexedStack({
     super.key,
@@ -45,16 +45,30 @@ class FadeIndexedStack extends StatefulWidget {
 
 class _FadeIndexedStackState extends State<FadeIndexedStack>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 180),
-  )..forward();
+  late AnimationController _ctrl;
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.index;
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 160),
+      value: 1.0,
+    );
+  }
 
   @override
   void didUpdateWidget(FadeIndexedStack old) {
     super.didUpdateWidget(old);
     if (old.index != widget.index) {
-      _ctrl.forward(from: 0);
+      _index = widget.index;
+      // Schedule after the current frame to avoid mutating animation state
+      // mid-rebuild, which causes _dependents assertion errors.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _ctrl.forward(from: 0.0);
+      });
     }
   }
 
@@ -68,7 +82,7 @@ class _FadeIndexedStackState extends State<FadeIndexedStack>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _ctrl,
-      child: IndexedStack(index: widget.index, children: widget.children),
+      child: IndexedStack(index: _index, children: widget.children),
     );
   }
 }

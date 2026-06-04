@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
       builder: (context, mode, _) {
         return ValueListenableBuilder<Locale?>(
           valueListenable: localeNotifier,
-          builder: (context, locale, __) {
+          builder: (context, locale, _) {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
               themeMode: mode,

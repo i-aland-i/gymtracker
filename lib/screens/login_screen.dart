@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../widgets/transitions.dart';
 
 enum _Mode { signIn, signUp, forgotPassword }
 
@@ -119,18 +118,22 @@ class _LoginScreenState extends State<LoginScreen> {
         case _Mode.signUp:
           await _auth.signUp(_email.text.trim(), _password.text.trim());
           if (mounted) {
-            setState(() => _successMessage =
-                'We sent a confirmation email to ${_email.text.trim()}.\n'
-                'Open the link inside to activate your account, then sign in.');
+            setState(
+              () => _successMessage =
+                  'We sent a confirmation email to ${_email.text.trim()}.\n'
+                  'Open the link inside to activate your account, then sign in.',
+            );
           }
           break;
 
         case _Mode.forgotPassword:
           await _auth.resetPassword(_email.text.trim());
           if (mounted) {
-            setState(() => _successMessage =
-                'Password reset link sent to ${_email.text.trim()}.\n'
-                'Check your inbox (and spam folder).');
+            setState(
+              () => _successMessage =
+                  'Password reset link sent to ${_email.text.trim()}.\n'
+                  'Check your inbox (and spam folder).',
+            );
           }
           break;
       }
@@ -178,9 +181,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _auth.resendConfirmation(_email.text.trim());
       if (mounted) {
-        setState(() => _successMessage =
-            'Confirmation email resent to ${_email.text.trim()}.\n'
-            'Check your inbox.');
+        setState(
+          () => _successMessage =
+              'Confirmation email resent to ${_email.text.trim()}.\n'
+              'Check your inbox.',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -230,8 +235,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // ── branding ──────────────────────────────────────────
-                    Icon(Icons.fitness_center_rounded,
-                        size: 64, color: cs.primary),
+                    Icon(
+                      Icons.fitness_center_rounded,
+                      size: 64,
+                      color: cs.primary,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'GymTracker',
@@ -284,19 +292,20 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _email,
                               decoration: InputDecoration(
                                 labelText: 'Email',
-                                prefixIcon:
-                                    const Icon(Icons.email_outlined),
+                                prefixIcon: const Icon(Icons.email_outlined),
                                 border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                               keyboardType: TextInputType.emailAddress,
-                              textInputAction:
-                                  _mode == _Mode.forgotPassword
-                                      ? TextInputAction.done
-                                      : TextInputAction.next,
+                              textInputAction: _mode == _Mode.forgotPassword
+                                  ? TextInputAction.done
+                                  : TextInputAction.next,
                               autofillHints: const [AutofillHints.email],
                               onFieldSubmitted: _mode == _Mode.forgotPassword
-                                  ? (_) { if (!_loading) _submit(); }
+                                  ? (_) {
+                                      if (!_loading) _submit();
+                                    }
                                   : null,
                               validator: (v) {
                                 if (v == null || v.trim().isEmpty) {
@@ -316,28 +325,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                 controller: _password,
                                 decoration: InputDecoration(
                                   labelText: 'Password',
-                                  prefixIcon:
-                                      const Icon(Icons.lock_outlined),
+                                  prefixIcon: const Icon(Icons.lock_outlined),
                                   border: OutlineInputBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
                                           ? Icons.visibility_outlined
-                                          : Icons
-                                              .visibility_off_outlined,
+                                          : Icons.visibility_off_outlined,
                                     ),
-                                    onPressed: () => setState(() =>
-                                        _obscurePassword =
-                                            !_obscurePassword),
+                                    onPressed: () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    ),
                                   ),
                                 ),
                                 obscureText: _obscurePassword,
                                 textInputAction: TextInputAction.done,
-                                autofillHints: const [
-                                  AutofillHints.password
-                                ],
+                                autofillHints: const [AutofillHints.password],
                                 onFieldSubmitted: (_) {
                                   if (!_loading) _submit();
                                 },
@@ -345,8 +351,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   if (v == null || v.isEmpty) {
                                     return 'Password is required';
                                   }
-                                  if (_mode == _Mode.signUp &&
-                                      v.length < 6) {
+                                  if (_mode == _Mode.signUp && v.length < 6) {
                                     return 'Must be at least 6 characters';
                                   }
                                   return null;
@@ -364,7 +369,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: _error != null
                                   ? Padding(
                                       padding: const EdgeInsets.only(
-                                          bottom: 12),
+                                        bottom: 12,
+                                      ),
                                       child: _FeedbackBanner(
                                         color: cs.error,
                                         icon: Icons.error_outline,
@@ -385,8 +391,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: _loading ? null : _submit,
                                 style: FilledButton.styleFrom(
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
                                 child: _loading
@@ -424,39 +429,39 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String get _subtitle => switch (_mode) {
-        _Mode.signIn => 'Welcome back',
-        _Mode.signUp => 'Create your account',
-        _Mode.forgotPassword => 'Reset your password',
-      };
+    _Mode.signIn => 'Welcome back',
+    _Mode.signUp => 'Create your account',
+    _Mode.forgotPassword => 'Reset your password',
+  };
 
   String get _buttonLabel => switch (_mode) {
-        _Mode.signIn => 'Sign in',
-        _Mode.signUp => 'Create account',
-        _Mode.forgotPassword => 'Send reset link',
-      };
+    _Mode.signIn => 'Sign in',
+    _Mode.signUp => 'Create account',
+    _Mode.forgotPassword => 'Send reset link',
+  };
 
   Widget _buildNavLinks() => switch (_mode) {
-        _Mode.signIn => Column(
-            children: [
-              TextButton(
-                onPressed: () => _switchMode(_Mode.forgotPassword),
-                child: const Text('Forgot password?'),
-              ),
-              TextButton(
-                onPressed: () => _switchMode(_Mode.signUp),
-                child: const Text("Don't have an account? Sign up"),
-              ),
-            ],
-          ),
-        _Mode.signUp => TextButton(
-            onPressed: () => _switchMode(_Mode.signIn),
-            child: const Text('Already have an account? Sign in'),
-          ),
-        _Mode.forgotPassword => TextButton(
-            onPressed: () => _switchMode(_Mode.signIn),
-            child: const Text('Back to sign in'),
-          ),
-      };
+    _Mode.signIn => Column(
+      children: [
+        TextButton(
+          onPressed: () => _switchMode(_Mode.forgotPassword),
+          child: const Text('Forgot password?'),
+        ),
+        TextButton(
+          onPressed: () => _switchMode(_Mode.signUp),
+          child: const Text("Don't have an account? Sign up"),
+        ),
+      ],
+    ),
+    _Mode.signUp => TextButton(
+      onPressed: () => _switchMode(_Mode.signIn),
+      child: const Text('Already have an account? Sign in'),
+    ),
+    _Mode.forgotPassword => TextButton(
+      onPressed: () => _switchMode(_Mode.signIn),
+      child: const Text('Back to sign in'),
+    ),
+  };
 }
 
 // ── shared feedback banner ────────────────────────────────────────────────────
@@ -502,10 +507,9 @@ class _FeedbackBanner extends StatelessWidget {
               Expanded(
                 child: Text(
                   message,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: fg),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: fg),
                 ),
               ),
             ],
@@ -518,8 +522,10 @@ class _FeedbackBanner extends StatelessWidget {
                 onPressed: onAction,
                 style: TextButton.styleFrom(
                   foregroundColor: color,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(

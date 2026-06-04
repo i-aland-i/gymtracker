@@ -14,36 +14,79 @@ class RoutineDetailScreen extends StatefulWidget {
 
 class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   final _service = WorkoutService();
-  late Future<List<Exercise>> _future;
   List<Exercise> _movements = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _future = _service.getRoutineExercises(widget.routine.id);
+    _load();
   }
 
-  void _refresh() =>
-      setState(() => _future = _service.getRoutineExercises(widget.routine.id));
+  Future<void> _load() async {
+    final data = await _service.getRoutineExercises(widget.routine.id);
+    if (mounted) setState(() { _movements = data; _loading = false; });
+  }
 
-  Future<void> _addExisting(Exercise exercise, int position) async {
+  void _reorder(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex--;
+    final list = List<Exercise>.from(_movements);
+    list.insert(newIndex, list.removeAt(oldIndex));
+    setState(() => _movements = list);
+    _service.updateExercisePositions(
+      widget.routine.id,
+      list.map((e) => e.id).toList(),
+    );
+  }
+
+  Future<void> _removeMovement(Exercise e) async {
+    final cs = Theme.of(context).colorScheme;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove movement?'),
+        content: Text('"${e.name}" will be removed from this workout day.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              foregroundColor: cs.onError,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _service.removeExerciseFromRoutine(widget.routine.id, e.id);
+      setState(() => _movements.removeWhere((m) => m.id == e.id));
+    }
+  }
+
+  Future<void> _addExisting(Exercise exercise) async {
     await _service.addExerciseToRoutine(
-        widget.routine.id, exercise.id, position);
-    if (mounted) Navigator.pop(context);
-    _refresh();
+        widget.routine.id, exercise.id, _movements.length);
+    if (!mounted) return;
+    Navigator.pop(context);
+    _load();
   }
 
-  Future<void> _createAndAdd(
-      String name, String? muscleGroup, int position) async {
-    final exercise = await _service.createExercise(name, muscleGroup: muscleGroup);
+  Future<void> _createAndAdd(String name, String? muscleGroup) async {
+    final exercise =
+        await _service.createExercise(name, muscleGroup: muscleGroup);
     await _service.addExerciseToRoutine(
-        widget.routine.id, exercise.id, position);
-    if (mounted) Navigator.pop(context);
-    _refresh();
+        widget.routine.id, exercise.id, _movements.length);
+    if (!mounted) return;
+    Navigator.pop(context);
+    _load();
   }
 
-  Future<void> _openAddSheet(int nextPosition, List<Exercise> alreadyIn) async {
-    final existingIds = alreadyIn.map((e) => e.id).toSet();
+  Future<void> _openAddSheet() async {
     final nameCtrl = TextEditingController();
     final muscleCtrl = TextEditingController();
 
@@ -61,10 +104,8 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Create new movement',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Create new movement',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 14),
               TextField(
                 controller: nameCtrl,
@@ -96,8 +137,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                     final name = nameCtrl.text.trim();
                     if (name.isEmpty) return;
                     final muscle = muscleCtrl.text.trim();
-                    _createAndAdd(name, muscle.isEmpty ? null : muscle,
-                        nextPosition);
+                    _createAndAdd(name, muscle.isEmpty ? null : muscle);
                   },
                 ),
               ),
@@ -110,8 +150,10 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                     child: Text(
                       'or pick existing',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
                     ),
                   ),
                   const Expanded(child: Divider()),
@@ -127,6 +169,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
+                  final existingIds = _movements.map((e) => e.id).toSet();
                   final catalog = snap.data!
                       .where((e) => !existingIds.contains(e.id))
                       .toList();
@@ -136,8 +179,10 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                       child: Text(
                         'Nothing else in your catalog yet.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     );
                   }
@@ -146,9 +191,8 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(e.name),
-                        subtitle: e.muscleGroup != null
-                            ? Text(e.muscleGroup!)
-                            : null,
+                        subtitle:
+                            e.muscleGroup != null ? Text(e.muscleGroup!) : null,
                         trailing: Container(
                           width: 32,
                           height: 32,
@@ -166,7 +210,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                                 .onPrimaryContainer,
                           ),
                         ),
-                        onTap: () => _addExisting(e, nextPosition),
+                        onTap: () => _addExisting(e),
                       );
                     }).toList(),
                   );
@@ -177,6 +221,9 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
         ),
       ),
     );
+
+    nameCtrl.dispose();
+    muscleCtrl.dispose();
   }
 
   @override
@@ -187,77 +234,90 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.routine.name)),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddSheet(_movements.length, _movements),
+        onPressed: _openAddSheet,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Add movement'),
       ),
-      body: FutureBuilder<List<Exercise>>(
-        future: _future,
-        builder: (context, snap) {
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          _movements = snap.data!;
-          if (_movements.isEmpty) {
-            return const EmptyState(
-              icon: Icons.bolt_rounded,
-              title: 'No movements yet',
-              subtitle: 'Tap "Add movement" to build this workout',
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.only(top: 8, bottom: 96),
-            itemCount: _movements.length,
-            itemBuilder: (context, i) {
-              final e = _movements[i];
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: cs.primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${i + 1}',
-                            style: t.labelLarge?.copyWith(
-                              color: cs.onPrimaryContainer,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _movements.isEmpty
+              ? const EmptyState(
+                  icon: Icons.bolt_rounded,
+                  title: 'No movements yet',
+                  subtitle: 'Tap "Add movement" to build this workout',
+                )
+              : ReorderableListView.builder(
+                  padding: const EdgeInsets.only(top: 8, bottom: 96),
+                  buildDefaultDragHandles: false,
+                  // ignore: deprecated_member_use
+                  onReorder: _reorder,
+                  itemCount: _movements.length,
+                  itemBuilder: (context, i) {
+                    final e = _movements[i];
+                    return Card(
+                      key: ValueKey(e.id),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
                           children: [
-                            Text(e.name, style: t.titleSmall),
-                            if (e.muscleGroup != null) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                e.muscleGroup!,
-                                style: t.bodySmall?.copyWith(
-                                  color: cs.onSurfaceVariant,
+                            // Position number
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: cs.primaryContainer,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${i + 1}',
+                                  style: t.labelLarge?.copyWith(
+                                      color: cs.onPrimaryContainer),
                                 ),
                               ),
-                            ],
+                            ),
+                            const SizedBox(width: 14),
+                            // Name + muscle
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(e.name, style: t.titleSmall),
+                                  if (e.muscleGroup != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      e.muscleGroup!,
+                                      style: t.bodySmall?.copyWith(
+                                          color: cs.onSurfaceVariant),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            // Delete
+                            IconButton(
+                              icon: Icon(Icons.delete_outline_rounded,
+                                  size: 20, color: cs.error),
+                              onPressed: () => _removeMovement(e),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            // Drag handle
+                            ReorderableDragStartListener(
+                              index: i,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(Icons.drag_handle_rounded,
+                                    color: cs.onSurfaceVariant
+                                        .withValues(alpha: 0.5)),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
-          );
-        },
-      ),
     );
   }
 }

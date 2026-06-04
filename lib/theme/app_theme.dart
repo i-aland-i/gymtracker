@@ -13,13 +13,34 @@ abstract final class AppTheme {
     final it = GoogleFonts.interTextTheme(base.textTheme);
 
     final t = it.copyWith(
-      displayLarge: it.displayLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -1.5),
-      displayMedium: it.displayMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -1.0),
-      displaySmall: it.displaySmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
-      headlineLarge: it.headlineLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
-      headlineMedium: it.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.3),
-      headlineSmall: it.headlineSmall?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2),
-      titleLarge: it.titleLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.3),
+      displayLarge: it.displayLarge?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1.5,
+      ),
+      displayMedium: it.displayMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -1.0,
+      ),
+      displaySmall: it.displaySmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
+      ),
+      headlineLarge: it.headlineLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
+      ),
+      headlineMedium: it.headlineMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+      ),
+      headlineSmall: it.headlineSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.2,
+      ),
+      titleLarge: it.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+      ),
       titleMedium: it.titleMedium?.copyWith(fontWeight: FontWeight.w600),
       titleSmall: it.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       labelLarge: it.labelLarge?.copyWith(fontWeight: FontWeight.w600),
@@ -38,7 +59,7 @@ abstract final class AppTheme {
         iconTheme: IconThemeData(color: cs.onSurface),
         actionsIconTheme: IconThemeData(color: cs.onSurfaceVariant),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: cs.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
@@ -69,26 +90,35 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: cs.error, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: it.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: it.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           textStyle: it.labelLarge,
         ),
       ),
@@ -110,12 +140,10 @@ abstract final class AppTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        showDragHandle: true,
-        dragHandleColor: cs.onSurfaceVariant.withValues(alpha: 0.4),
-        dragHandleSize: const Size(40, 4),
+        showDragHandle: false,
       ),
-      dialogTheme: DialogTheme(
-        backgroundColor: cs.surface,
+      dialogTheme: DialogThemeData(
+        backgroundColor: cs.surfaceContainerHigh,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: t.titleLarge?.copyWith(color: cs.onSurface),
@@ -138,7 +166,9 @@ abstract final class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        contentTextStyle: it.bodyMedium,
+        backgroundColor: cs.inverseSurface,
+        contentTextStyle: it.bodyMedium?.copyWith(color: cs.onInverseSurface),
+        actionTextColor: cs.inversePrimary,
       ),
     );
   }
